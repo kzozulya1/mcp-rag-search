@@ -1,0 +1,25 @@
+[project]
+name = "rag-search"
+version = "0.1.0"
+description = "RAG search MCP server backed by Qdrant — add documents, list collections, and perform semantic search."
+readme = "README.md"
+authors = [
+    { name = "Konstantin Zozulya", email = "konstantin.zozulya@myoffice.team" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=2.0",
+    "qdrant-client>=1.7",
+    "langchain>=0.3",
+    "langchain-qdrant>=0.2",
+    "langchain-openai>=0.3",
+    "python-dotenv>=1.0",
+    "langchain-text-splitters>=1.1.3",
+]
+
+[project.scripts]
+rag-search = "rag_search.mcp_server:main"
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
