@@ -1,25 +1,26 @@
 # RAG Search MCP Server
 
-MCP-сервер для работы с RAG-системой на базе Qdrant. Предоставляет инструменты для загрузки документов, управления коллекциями и семантического поиска.
+An MCP server for RAG operations backed by Qdrant. Exposes tools for adding documents, listing collections, clearing the document collection, and performing semantic search.
 
-## Зависимости
+## Dependencies
 
-- Python >= 3.10
-- `fastmcp` — MCP-серверная библиотека
-- `qdrant-client` — клиент Qdrant
-- `langchain`, `langchain-qdrant` — векторное хранилище
-- `langchain-openai` — эмбеддинги
-- `python-dotenv` — загрузка `.env`
+- Python >= 3.10 (pinned to 3.14)
+- `fastmcp` — MCP server library
+- `qdrant-client` — Qdrant client
+- `langchain`, `langchain-qdrant` — vector store
+- `langchain-openai` — embeddings
+- `langchain-text-splitters` — chunking
+- `python-dotenv` — `.env` loading
 
-## Установка
+## Installation
 
 ```bash
 uv sync
 ```
 
-## Конфигурация
+## Configuration
 
-Создайте `.env` в корне проекта:
+Create a `.env` file in the project root:
 
 ```env
 OPENAI_API_KEY=your-api-key
@@ -34,63 +35,78 @@ CHUNK_SIZE=500
 CHUNK_OVERLAP=50
 ```
 
-## Запуск
+`config.py` calls `load_dotenv()` at import time; all values have sensible defaults if `.env` is absent.
 
-### Stdio-транспорт (по умолчанию)
+## Running
+
+Start Qdrant (if not already running):
+
+```bash
+docker compose up -d
+```
+
+### SSE transport (default)
 
 ```bash
 uv run rag-search
 ```
 
-### SSE-транспорт
+### Stdio transport
 
 ```bash
-uv run -m fastmcp.serve sse rag_search.mcp_server:mcp
+uv run python -m rag_search.mcp_server
 ```
 
-## Инструменты
+## Tools
 
 ### `add_document`
 
-Загружает текст в Qdrant, разбивая на чанки.
+Loads text into Qdrant, splitting it into chunks.
 
-**Параметры:**
-- `text` (str, required) — текст документа
-- `metadata` (dict | None, optional) — метаданные для чанков
+**Parameters:**
+- `text` (str, required) — the document text to load
 
-**Возвращает:** строку с результатом операции.
+**Returns:** a result string (e.g. `"Added 3 chunk(s) to collection 'documents'."`).
 
 ### `list_documents`
 
-Возвращает список всех коллекций Qdrant с метриками.
+Returns all Qdrant collections with vector count and dimension.
 
-**Возвращает:** `list[dict]` — каждая запись содержит `name`, `vectors_count`, `dimensions`.
+**Returns:** `list[dict]` — each entry contains `name`, `vectors_count`, `dimensions`.
+
+### `clear_documents`
+
+Removes all documents from the `documents` collection and recreates it empty.
+
+**Returns:** a confirmation string (e.g. `"Collection 'documents' cleared and recreated."`).
 
 ### `semantic_search`
 
-Семантический поиск по индексированным документам.
+Performs a semantic search over indexed documents.
 
-**Параметры:**
-- `query` (str, required) — поисковый запрос
-- `k` (int, default=5) — количество результатов
+**Parameters:**
+- `query` (str, required) — the search query
+- `k` (int, default=5) — number of results to return
 
-**Возвращает:** `list[dict]` — каждая запись содержит `content`, `metadata`, `score`.
+**Returns:** `list[dict]` — each entry contains `content`, `metadata`, `score`.
 
-## Структура проекта
+## Project Structure
 
 ```
 rag-search/
-├── pyproject.toml
-├── config.py              # Конфигурация (OpenAI, Qdrant, Chunking)
-├── vectorstore.py         # Векторные операции (load, search, collection)
+├── pyproject.toml           # deps, console script, build backend
+├── docker-compose.yml       # Qdrant service
+├── .env                     # local secrets (not committed)
+├── vectorstore.py           # legacy module (dead code, not imported by package)
 ├── src/rag_search/
-│   ├── __init__.py        # Entry-point MCP-сервера
-│   └── mcp_server.py      # FastMCP сервер с инструментами
+│   ├── __init__.py          # empty
+│   ├── config.py            # env-driven settings (OpenAI, Qdrant, chunking)
+│   └── mcp_server.py        # FastMCP server, all tools, entry point
 └── README.md
 ```
 
 ## Security Notes
 
-- API-ключи хранятся в `.env` и не должны попадать в репозиторий.
-- Qdrant-подключение использует HTTP без TLS по умолчанию — для продакшена настройте HTTPS или используйте gRPC.
-- Ввод инструментов валидируется FastMCP на основе type hints.
+- API keys are stored in `.env` and must not be committed to the repository.
+- The Qdrant connection uses plain HTTP by default — configure TLS or use gRPC for production.
+- Tool inputs are validated by FastMCP based on type hints.
