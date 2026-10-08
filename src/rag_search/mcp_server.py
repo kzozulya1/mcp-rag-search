@@ -139,6 +139,35 @@ def list_documents() -> list[dict[str, Any]]:
 
 @mcp.tool(
     annotations={
+        "title": "Clear Documents",
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+def clear_documents() -> str:
+    """Remove all documents from the documents collection.
+
+    Returns:
+        A confirmation message.
+    """
+    logger.info("clear_documents: removing all documents from '%s'", config.COLLECTION_NAME)
+    client = _get_qdrant_client()
+
+    try:
+        client.delete_collection(config.COLLECTION_NAME)
+    except Exception:
+        return f"Collection '{config.COLLECTION_NAME}' does not exist."
+
+    embedding_dim = _get_embeddings().embed_query("dim probe")
+    _ensure_collection(client, len(embedding_dim))
+
+    return f"Collection '{config.COLLECTION_NAME}' cleared and recreated."
+
+
+@mcp.tool(
+    annotations={
         "title": "Semantic Search",
         "readOnlyHint": True,
         "destructiveHint": False,
